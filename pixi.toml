@@ -1,0 +1,69 @@
+"$schema" = "https://pixi.sh/v0.48.0/schema/manifest/schema.json"
+
+[tasks]
+all = {depends-on = ["lint", "test"]}
+lint = {depends-on = ["taplo", "actionlint"]}
+test = {depends-on = ["nh3"]}
+
+# templates ####################################################################
+pytest-- = {args = ["pkg", {arg = "test_path", default = "1/tests"}], cmd = """
+  export TEST_PATH=$PIXI_PROJECT_ROOT/build/reports/{{ pkg }}
+  && rm -rf $TEST_PATH
+  && mkdir -p $TEST_PATH
+  && cd $TEST_PATH
+  && pytest 
+    -vv 
+    -o cache_dir=$PIXI_PROJECT_ROOT/build/.cache/.pytest_cache_{{ pkg }}
+    --tb=long 
+    --color=yes 
+    --html=$TEST_PATH/pytest.html
+    --self-contained-html
+    "$CONDA_PREFIX/etc/conda/test-files/{{ pkg }}/{{ test_path }}"
+""", outputs = ["build/reports/{{ pkg }}/pytest.html"]}
+smoke-- = {args = ["mods"], cmd = '''
+python -c "{%- for mod in mods | split(" ") %}
+__import__('{{ mod }}');{% endfor %}"'''}
+
+# nh3 ##########################################################################
+[feature.nh3.dependencies]
+nh3 = "*"
+
+[feature.nh3.tasks]
+nh3 = {depends-on = ["nh3-smoke", "nh3-pytest"]}
+nh3-pytest = {depends-on = [{task = "pytest--", environment = "nh3", args = ["nh3"]}]}
+nh3-smoke = {depends-on = [{task = "smoke--", environment = "nh3", args = ["nh3"]}]}
+
+# lint #########################################################################
+[feature.lint.dependencies]
+actionlint-with-shellcheck = "*"
+taplo = "*"
+
+[feature.lint.tasks.actionlint]
+cmd = "actionlint -shellcheck=shellcheck"
+inputs = [".github/workflows"]
+
+[feature.lint.tasks.taplo]
+cmd = """taplo format *.toml 
+  --option=array_auto_collapse=true
+  --option=compact_inline_tables=true
+  --option=reorder_keys=true
+  --option=column_width=100"""
+description = "... fix toml files"
+inputs = ["*.toml"]
+
+# pytest #######################################################################
+[feature.pytest.dependencies]
+pytest-cov = "*"
+pytest-html = "*"
+
+# envs #########################################################################
+[environments]
+lint = ["lint"]
+nh3 = ["nh3", "pytest"]
+
+# meta #########################################################################
+[project]
+channels = ["conda-forge"]
+name = "cf-osx-arm64-check"
+platforms = ["linux-64", "osx-arm64"]
+requires-pixi = ">=0.48.0"
