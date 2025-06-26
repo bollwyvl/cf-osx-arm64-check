@@ -2,7 +2,7 @@
 
 [tasks]
 all = {depends-on = ["lint", "test"]}
-lint = {depends-on = ["taplo", "actionlint"]}
+lint = {depends-on = ["taplo", "prettier", "actionlint"]}
 test = {depends-on = ["nh3"]}
 
 # templates ####################################################################
@@ -36,6 +36,7 @@ nh3-smoke = {depends-on = [{task = "smoke--", environment = "nh3", args = ["nh3"
 # lint #########################################################################
 [feature.lint.dependencies]
 actionlint-with-shellcheck = "*"
+prettier = "*"
 taplo = "*"
 
 [feature.lint.tasks.actionlint]
@@ -50,6 +51,15 @@ cmd = """taplo format *.toml
   --option=column_width=100"""
 description = "... fix toml files"
 inputs = ["*.toml"]
+
+[feature.lint.tasks.prettier]
+cmd = """prettier 
+  --write 
+  --prose-wrap=always
+  --print-width=88
+  *.md 
+  .github/**/*.yml"""
+inputs = ["*.md", ".github/**/*.yml"]
 
 # pytest #######################################################################
 [feature.pytest.dependencies]
