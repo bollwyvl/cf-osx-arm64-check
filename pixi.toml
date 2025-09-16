@@ -1,9 +1,9 @@
-"$schema" = "https://pixi.sh/v0.48.0/schema/manifest/schema.json"
+"$schema" = "https://pixi.sh/v0.54.2/schema/manifest/schema.json"
 
 [tasks]
 all = {depends-on = ["lint", "test"]}
 lint = {depends-on = ["taplo", "prettier", "actionlint"]}
-test = {depends-on = ["nh3"]}
+test = {depends-on = ["nh3", "pyrudof"]}
 
 # templates ####################################################################
 pytest-- = {args = ["pkg", {arg = "test_path", default = "1/tests"}], cmd = """
@@ -27,11 +27,23 @@ __import__('{{ mod }}');{% endfor %}"'''}
 # nh3 ##########################################################################
 [feature.nh3.dependencies]
 nh3 = "*"
-
 [feature.nh3.tasks]
 nh3 = {depends-on = ["nh3-smoke", "nh3-pytest"]}
 nh3-pytest = {depends-on = [{task = "pytest--", environment = "nh3", args = ["nh3"]}]}
 nh3-smoke = {depends-on = [{task = "smoke--", environment = "nh3", args = ["nh3"]}]}
+
+# rudof ########################################################################
+[feature.pyrudof.dependencies]
+pyrudof = "*"
+[feature.pyrudof.tasks]
+pyrudof = {depends-on = ["pyrudof-smoke", "pyrudof-pytest"]}
+pyrudof-pytest = {depends-on = [
+  {task = "pytest--", environment = "pyrudof", args = [
+    "pyrudof",
+    "1/python/tests",
+  ]},
+]}
+pyrudof-smoke = {depends-on = [{task = "smoke--", environment = "pyrudof", args = ["pyrudof"]}]}
 
 # lint #########################################################################
 [feature.lint.dependencies]
@@ -70,10 +82,11 @@ pytest-html = "*"
 [environments]
 lint = ["lint"]
 nh3 = ["nh3", "pytest"]
+pyrudof = ["pyrudof", "pytest"]
 
 # meta #########################################################################
 [project]
 channels = ["conda-forge"]
 name = "cf-osx-arm64-check"
 platforms = ["linux-64", "osx-arm64"]
-requires-pixi = ">=0.48.0"
+requires-pixi = ">=0.54.2"

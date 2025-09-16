@@ -14,16 +14,20 @@ concurrency:
 jobs:
   test:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        test-env: [nh3, pyrudof]
+
     steps:
       - uses: actions/checkout@v4
-      - uses: prefix-dev/setup-pixi@v0.8.8
+      - uses: prefix-dev/setup-pixi@v0.9.0
         with:
-          pixi-version: v0.48.0
+          pixi-version: v0.54.2
           cache: true
-          environments: nh3
-      - run: pixi run test
+          environments: ${{ matrix.test-env }}
+      - run: pixi run ${{ matrix.test-env }}
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: report-${{ github.run_number }}
+          name: report-${{ github.run_number }}-${{ matrix.test-env }}
           path: build/reports
