@@ -1,26 +1,29 @@
-"$schema" = "https://pixi.sh/v0.54.2/schema/manifest/schema.json"
+"$schema" = "https://pixi.sh/v0.63.2/schema/manifest/schema.json"
 
 [tasks]
-all = {depends-on = ["lint", "test"]}
-lint = {depends-on = ["taplo", "prettier", "actionlint"]}
-test = {depends-on = ["nh3", "pyrudof"]}
+all.depends-on = ["lint", "test"]
+all.description = "all tasks"
+lint.depends-on = ["taplo", "prettier", "actionlint"]
+lint.description = "lint all"
+test.depends-on = ["pyoxigraph", "nh3", "pyrudof"]
+test.description = "test all"
 
 # templates ####################################################################
-pytest-- = {args = ["pkg", {arg = "test_path", default = "1/tests"}], cmd = """
+_pytest = {args = ["pkg", {arg = "test_path", default = "1/tests"}], cmd = """
   export TEST_PATH=$PIXI_PROJECT_ROOT/build/reports/{{ pkg }}
   && rm -rf $TEST_PATH
   && mkdir -p $TEST_PATH
   && cd $TEST_PATH
-  && pytest 
-    -vv 
+  && pytest
+    -vv
     -o cache_dir=$PIXI_PROJECT_ROOT/build/.cache/.pytest_cache_{{ pkg }}
-    --tb=long 
-    --color=yes 
+    --tb=long
+    --color=yes
     --html=$TEST_PATH/pytest.html
     --self-contained-html
     "$CONDA_PREFIX/etc/conda/test-files/{{ pkg }}/{{ test_path }}"
 """, outputs = ["build/reports/{{ pkg }}/pytest.html"]}
-smoke-- = {args = ["mods"], cmd = '''
+_smoke = {args = ["mods"], cmd = '''
 python -c "{%- for mod in mods | split(" ") %}
 __import__('{{ mod }}');{% endfor %}"'''}
 
@@ -29,8 +32,8 @@ __import__('{{ mod }}');{% endfor %}"'''}
 nh3 = "*"
 [feature.nh3.tasks]
 nh3 = {depends-on = ["nh3-smoke", "nh3-pytest"]}
-nh3-pytest = {depends-on = [{task = "pytest--", environment = "nh3", args = ["nh3"]}]}
-nh3-smoke = {depends-on = [{task = "smoke--", environment = "nh3", args = ["nh3"]}]}
+nh3-pytest = {depends-on = [{task = "_pytest", environment = "nh3", args = ["nh3"]}]}
+nh3-smoke = {depends-on = [{task = "_smoke", environment = "nh3", args = ["nh3"]}]}
 
 # rudof ########################################################################
 [feature.pyrudof.dependencies]
@@ -38,12 +41,29 @@ pyrudof = "*"
 [feature.pyrudof.tasks]
 pyrudof = {depends-on = ["pyrudof-smoke", "pyrudof-pytest"]}
 pyrudof-pytest = {depends-on = [
-  {task = "pytest--", environment = "pyrudof", args = [
+  {task = "_pytest", environment = "pyrudof", args = [
     "pyrudof",
     "1/python/tests",
   ]},
 ]}
-pyrudof-smoke = {depends-on = [{task = "smoke--", environment = "pyrudof", args = ["pyrudof"]}]}
+pyrudof-smoke = {depends-on = [{task = "_smoke", environment = "pyrudof", args = ["pyrudof"]}]}
+
+# rudof ########################################################################
+[feature.pyoxigraph.dependencies]
+pyoxigraph = ">=0.5.4"
+[feature.pyoxigraph.tasks]
+pyoxigraph = {depends-on = ["pyoxigraph-smoke", "pyoxigraph-pytest"]}
+pyoxigraph-pytest = {depends-on = [
+  {task = "_pytest", environment = "pyoxigraph", args = [
+    "pyoxigraph",
+    "1/python/tests",
+  ]},
+]}
+pyoxigraph-smoke = {depends-on = [
+  {task = "_smoke", environment = "pyoxigraph", args = [
+    "pyoxigraph",
+  ]},
+]}
 
 # lint #########################################################################
 [feature.lint.dependencies]
@@ -56,7 +76,7 @@ cmd = "actionlint -shellcheck=shellcheck"
 inputs = [".github/workflows"]
 
 [feature.lint.tasks.taplo]
-cmd = """taplo format *.toml 
+cmd = """taplo format *.toml
   --option=array_auto_collapse=true
   --option=compact_inline_tables=true
   --option=reorder_keys=true
@@ -65,11 +85,11 @@ description = "... fix toml files"
 inputs = ["*.toml"]
 
 [feature.lint.tasks.prettier]
-cmd = """prettier 
-  --write 
+cmd = """prettier
+  --write
   --prose-wrap=always
   --print-width=88
-  *.md 
+  *.md
   .github/**/*.yml"""
 inputs = ["*.md", ".github/**/*.yml"]
 
@@ -82,11 +102,12 @@ pytest-html = "*"
 [environments]
 lint = ["lint"]
 nh3 = ["nh3", "pytest"]
+pyoxigraph = ["pyoxigraph", "pytest"]
 pyrudof = ["pyrudof", "pytest"]
 
 # meta #########################################################################
-[project]
+[workspace]
 channels = ["conda-forge"]
 name = "cf-osx-arm64-check"
 platforms = ["linux-64", "osx-arm64"]
-requires-pixi = ">=0.54.2"
+requires-pixi = ">=0.63.2"
