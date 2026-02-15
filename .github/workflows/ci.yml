@@ -13,20 +13,24 @@ jobs:
   test:
     runs-on: macos-latest
     strategy:
+      max-parallel: 3
+      fail-fast: false
       matrix:
-        test-env: [nh3, pyrudof, pyoxigraph]
-
+        lib: [nh3, pyrudof, pyoxigraph]
+        era: [min, max, t]
+        exclude:
+          - {lib: pyrudof, era: t}
     steps:
       - uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           pixi-version: v0.63.2
           cache: true
-          environments: ${{ matrix.test-env }}
-      - run: pixi run ${{ matrix.test-env }}
+          environments: test-${{ matrix.lib }}-${{ matrix.era }}
+      - run: pixi run test-${{ matrix.lib }}-${{ matrix.era }}
       - if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: report-${{ github.run_number }}-${{ matrix.test-env }}
+          name: report-${{ github.run_number }}-${{ matrix.lib }}-${{ matrix.era }}
           path: |
             build/reports
