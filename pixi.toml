@@ -1,42 +1,74 @@
-"$schema" = "https://pixi.sh/v0.63.2/schema/manifest/schema.json"
+"$schema" = "https://pixi.sh/v0.64.0/schema/manifest/schema.json"
+# meta #########################################################################
+[workspace]
+channels = ["conda-forge"]
+name = "cf-osx-arm64-check"
+platforms = ["linux-64", "osx-arm64"]
+requires-pixi = ">=0.64.0"
 
+# envs #########################################################################
+[environments]
+lint = ["lint"]
+test-jsonschema-rs-max = ["jsonschema-rs", "pytest", "py-max"]
+test-jsonschema-rs-max-ft = ["jsonschema-rs", "pytest", "py-max-ft"]
+test-jsonschema-rs-min = ["jsonschema-rs", "pytest", "py-min"]
+test-nh3-max = ["nh3", "pytest", "py-max"]
+test-nh3-max-ft = ["nh3", "pytest", "py-max-ft"]
+test-nh3-min = ["nh3", "pytest", "py-min"]
+test-pyoxigraph-max = ["pyoxigraph", "pytest", "py-max"]
+test-pyoxigraph-max-ft = ["pyoxigraph", "pytest", "py-max-ft"]
+test-pyoxigraph-min = ["pyoxigraph", "pytest", "py-min"]
+test-pyrudof-max = ["pyrudof", "pytest", "py-max"]
+test-pyrudof-min = ["pyrudof", "pytest", "py-min"]
+# test-pyrudof-max-ft = ["pyrudof", "pytest", "py-max-ft"]
+
+# tasks ########################################################################
 [tasks]
 all.depends-on = ["lint", "test"]
 lint.depends-on = ["taplo", "prettier", "actionlint"]
 
 # tests
 test.depends-on = [
+  "test-jsonschema-rs-min",
+  "test-jsonschema-rs-max",
+  "test-jsonschema-rs-max-ft",
   "test-pyoxigraph-min",
   "test-pyoxigraph-max",
-  "test-pyoxigraph-t",
+  "test-pyoxigraph-max-ft",
   "test-nh3-min",
   "test-nh3-max",
-  "test-nh3-t",
+  "test-nh3-max-ft",
   "test-pyrudof-min",
   "test-pyrudof-max",
-  # "test-pyrudof-t",
+  # "test-pyrudof-max-ft",
 ]
 test-nh3-max = {depends-on = [{task = "_test", args = ["nh3", "max"]}]}
+test-nh3-max-ft = {depends-on = [{task = "_test", args = ["nh3", "max-ft"]}]}
 test-nh3-min = {depends-on = [{task = "_test", args = ["nh3", "min"]}]}
-test-nh3-t = {depends-on = [{task = "_test", args = ["nh3", "t"]}]}
+
 test-pyoxigraph-max = {depends-on = [{task = "_test", args = ["pyoxigraph", "max"]}]}
+test-pyoxigraph-max-ft = {depends-on = [{task = "_test", args = ["pyoxigraph", "max-ft"]}]}
 test-pyoxigraph-min = {depends-on = [{task = "_test", args = ["pyoxigraph", "min"]}]}
-test-pyoxigraph-t = {depends-on = [{task = "_test", args = ["pyoxigraph", "t"]}]}
+
 test-pyrudof-max = {depends-on = [{task = "_test", args = ["pyrudof", "max"]}]}
+test-pyrudof-max-ft = {depends-on = [{task = "_test", args = ["pyrudof", "max-ft"]}]}
 test-pyrudof-min = {depends-on = [{task = "_test", args = ["pyrudof", "min"]}]}
-test-pyrudof-t = {depends-on = [{task = "_test", args = ["pyrudof", "t"]}]}
+
+test-jsonschema-rs-max = {depends-on = [{task = "_test", args = ["jsonschema-rs", "max"]}]}
+test-jsonschema-rs-max-ft = {depends-on = [{task = "_test", args = ["jsonschema-rs", "max-ft"]}]}
+test-jsonschema-rs-min = {depends-on = [{task = "_test", args = ["jsonschema-rs", "min"]}]}
 
 # templates ####################################################################
 [tasks._test]
 args = ["pkg", "era"]
 depends-on = [
   {task = "_smoke", args = [
-    "{{pkg}}",
-    "{{era}}",
+    "{{ pkg }}",
+    "{{ era }}",
   ]},
   {task = "_pytest", args = [
-    "{{pkg}}",
-    "{{era}}",
+    "{{ pkg }}",
+    "{{ era }}",
   ]},
 ]
 
@@ -44,10 +76,12 @@ depends-on = [
 args = ["pkg", "era"]
 cmd = """
   {% set env = ["test", pkg, era] | join("-") %}
+  {% set k = '-k "not readme"' if pkg in ["jsonschema-rs"] %}
   export TEST_PATH=$PIXI_PROJECT_ROOT/build/reports/{{ pkg }}/{{ era }}/
   && rm -rf $TEST_PATH
   && mkdir -p $TEST_PATH
   && cd $TEST_PATH
+  && pixi run --environment {{ env }} python -c "import sys,platform; print (sys.version, platform.platform())"
   && pixi run --environment {{ env }}
     pytest
       -vv
@@ -56,6 +90,12 @@ cmd = """
       --color=yes
       --html=$TEST_PATH/pytest.html
       --self-contained-html
+      {%- if pkg == "jsonschema-rs" %}
+      -k "not readme"
+      {%- endif %}
+      {%- if era == "max-ft" %}
+      --parallel-threads=8
+      {%- endif %}
       $PIXI_PROJECT_ROOT/.pixi/envs/{{ env }}/etc/conda/test-files/{{ pkg }}/*
 """
 outputs = ["build/reports/{{ pkg }}/{{ era }}/pytest.html"]
@@ -63,17 +103,22 @@ outputs = ["build/reports/{{ pkg }}/{{ era }}/pytest.html"]
 args = ["pkg", "era"]
 cmd = '''
   pixi run --environment test-{{ pkg }}-{{ era }}
-  python -c "__import__('{{ pkg }}');"'''
+  python -c "__import__('{{ pkg | replace("-", "_") }}');"'''
 
 # lint #########################################################################
 [feature.lint.dependencies]
 actionlint-with-shellcheck = "*"
 prettier = "*"
 taplo = "*"
+zizmor = "*"
 
 [feature.lint.tasks.actionlint]
 cmd = "actionlint -shellcheck=shellcheck"
 inputs = [".github/workflows"]
+
+[feature.lint.tasks.zizmor]
+cmd = "zizmor .github/workflows"
+inputs = [".github"]
 
 [feature.lint.tasks.taplo]
 cmd = """taplo format *.toml
@@ -98,31 +143,15 @@ inputs = ["*.md", ".github/**/*.yml"]
 pytest-cov = "*"
 pytest-html = "*"
 
-# envs #########################################################################
+# deps #########################################################################
 [feature]
+## packages-under-test #########################################################
+jsonschema-rs.dependencies = {jsonschema-rs = "*", hypothesis = "*"}
 nh3.dependencies.nh3 = "*"
 pyoxigraph.dependencies.pyoxigraph = ">=0.5.4"
 pyrudof.dependencies.pyrudof = "*"
 
+## pythons #####################################################################
 py-max.dependencies.python-gil = "3.14.*"
+py-max-ft.dependencies = {python-freethreading = "3.14.*", pytest-run-parallel = "*"}
 py-min.dependencies.python = "3.10.*"
-py-t.dependencies.python-freethreading = "3.14.*"
-
-[environments]
-lint = ["lint"]
-test-nh3-max = ["nh3", "pytest", "py-max"]
-test-nh3-min = ["nh3", "pytest", "py-min"]
-test-nh3-t = ["nh3", "pytest", "py-t"]
-test-pyoxigraph-max = ["pyoxigraph", "pytest", "py-max"]
-test-pyoxigraph-min = ["pyoxigraph", "pytest", "py-min"]
-test-pyoxigraph-t = ["pyoxigraph", "pytest", "py-t"]
-test-pyrudof-max = ["pyrudof", "pytest", "py-max"]
-test-pyrudof-min = ["pyrudof", "pytest", "py-min"]
-# test-pyrudof-t = ["pyrudof", "pytest", "py-t"]
-
-# meta #########################################################################
-[workspace]
-channels = ["conda-forge"]
-name = "cf-osx-arm64-check"
-platforms = ["linux-64", "osx-arm64"]
-requires-pixi = ">=0.63.2"

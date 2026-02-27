@@ -9,6 +9,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   test:
     runs-on: macos-latest
@@ -16,21 +18,29 @@ jobs:
       max-parallel: 3
       fail-fast: false
       matrix:
-        lib: [nh3, pyrudof, pyoxigraph]
-        era: [min, max, t]
+        lib: [jsonschema-rs, nh3, pyrudof, pyoxigraph]
+        era: [min, max, max-ft]
         exclude:
-          - {lib: pyrudof, era: t}
+          - { lib: pyrudof, era: max-ft }
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          pixi-version: v0.63.2
+          pixi-version: v0.64.0
           cache: true
           environments: test-${{ matrix.lib }}-${{ matrix.era }}
       - run: pixi run test-${{ matrix.lib }}-${{ matrix.era }}
       - if: always()
-        uses: actions/upload-artifact@v6
+        run: |-
+          cp \
+            build/reports/${{ matrix.lib }}/${{ matrix.era }}/pytest.html \
+            pytest-${{ matrix.lib }}-${{ matrix.era }}.html
+      - if: always()
+        uses: actions/upload-artifact@v7
         with:
           name: report-${{ github.run_number }}-${{ matrix.lib }}-${{ matrix.era }}
+          archive: false
           path: |
-            build/reports
+            pytest-${{ matrix.lib }}-${{ matrix.era }}.html
