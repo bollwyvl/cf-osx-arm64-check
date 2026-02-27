@@ -32,6 +32,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: report-${{ github.run_number }}-${{ matrix.lib }}-${{ matrix.era }}
-          artifact: false
+          archoive: false
           path: |
             build/reports
