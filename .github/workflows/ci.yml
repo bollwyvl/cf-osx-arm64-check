@@ -38,4 +38,4 @@ jobs:
           name: report-${{ github.run_number }}-${{ matrix.lib }}-${{ matrix.era }}
           archive: false
           path: |
-            build/reports
+            build/reports/${{ matrix.lib }}/${{ matrix.era }}/pytest.html
