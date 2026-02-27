@@ -33,9 +33,14 @@ jobs:
           environments: test-${{ matrix.lib }}-${{ matrix.era }}
       - run: pixi run test-${{ matrix.lib }}-${{ matrix.era }}
       - if: always()
+        run: |-
+          cp \
+            build/reports/${{ matrix.lib }}/${{ matrix.era }}/pytest.html \
+            pytest-${{ matrix.lib }}-${{ matrix.era }}.html
+      - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: report-${{ github.run_number }}-${{ matrix.lib }}-${{ matrix.era }}
           archive: false
           path: |
-            build/reports/${{ matrix.lib }}/${{ matrix.era }}/pytest.html
+            pytest-${{ matrix.lib }}-${{ matrix.era }}.html
