@@ -9,6 +9,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   test:
     runs-on: macos-latest
@@ -22,6 +24,8 @@ jobs:
           - { lib: pyrudof, era: max-ft }
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           pixi-version: v0.64.0
@@ -32,6 +36,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: report-${{ github.run_number }}-${{ matrix.lib }}-${{ matrix.era }}
-          archoive: false
+          archive: false
           path: |
             build/reports

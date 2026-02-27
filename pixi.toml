@@ -110,10 +110,15 @@ cmd = '''
 actionlint-with-shellcheck = "*"
 prettier = "*"
 taplo = "*"
+zizmor = "*"
 
 [feature.lint.tasks.actionlint]
 cmd = "actionlint -shellcheck=shellcheck"
 inputs = [".github/workflows"]
+
+[feature.lint.tasks.zizmor]
+cmd = "zizmor .github/workflows"
+inputs = [".github"]
 
 [feature.lint.tasks.taplo]
 cmd = """taplo format *.toml
